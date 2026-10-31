@@ -1,6 +1,4 @@
-<div align="center">
-
-# 🤖 telegram-bot-framework-mcp
+# telegram-bot-framework-mcp
 
 **Give your AI assistant the real source, docs and a curated how-to guide for the
 [TelegramBotBase](https://github.com/MajMcCloud/TelegramBotFramework) .NET framework.**
@@ -11,9 +9,7 @@
 [![MCP](https://img.shields.io/badge/protocol-MCP-6f42c1)](https://modelcontextprotocol.io)
 [![Framework](https://img.shields.io/badge/TelegramBotBase-8.0.0--preview.2-0088cc?logo=telegram)](https://www.nuget.org/packages/TelegramBotBase)
 
-[Quick start](#-quick-start) · [Tools](#-tools) · [Examples](#-example-prompts) · [Self-hosting](#-hosting-on-a-vps) · [Upgrading](#-upgrading-the-framework-version) · [CI](#-ci-and-publishing)
-
-</div>
+[Quick start](#quick-start) · [Tools](#tools) · [Examples](#example-prompts) · [Self-hosting](#hosting-on-a-vps) · [Upgrading](#upgrading-the-framework-version) · [CI](#ci-and-publishing)
 
 ---
 
@@ -22,13 +18,13 @@ An [MCP](https://modelcontextprotocol.io) server that lets an AI assistant answe
 source code**, not from memory. It ships as a Docker image with the framework source baked in, pinned to
 **8.0.0-preview.2** (`development` branch, commit `6780abf`), together with a curated how-to guide.
 
-| | |
+| Feature | |
 |---|---|
-| 🧭 **Ask in plain English** | `ask` ranks guide sections, known pitfalls and matching types in one call |
-| 🔎 **Exact answers** | read real signatures, doc comments and example bots straight from the pinned source |
-| 🩹 **Pitfall finder** | describe a symptom ("button spins forever") and get the known cause and fix |
-| 🔄 **Upgrade helper** | public API diff between any two tags or commits |
-| 🌐 **Use it your way** | free public endpoint, local Docker (stdio), or your own VPS |
+| **Ask in plain English** | `ask` ranks guide sections, known pitfalls and matching types in one call |
+| **Exact answers** | read real signatures, doc comments and example bots straight from the pinned source |
+| **Pitfall finder** | describe a symptom ("button spins forever") and get the known cause and fix |
+| **Upgrade helper** | public API diff between any two tags or commits |
+| **Use it your way** | free public endpoint, local Docker (stdio), or your own VPS |
 
 > [!WARNING]
 > 8.0.0-preview.2 is a **preview**; its API can still change before 8.0.0. The builder in this version has an extra
@@ -36,14 +32,14 @@ source code**, not from memory. It ships as a Docker image with the framework so
 > To serve 7.2.0 instead, build with `--build-arg TGBOTBASE_REF=13fff09c2736e4616f1d3c5dffe40401b92c81b0
 > --build-arg TGBOTBASE_NUGET_VERSION=7.2.0` and expect the guide's dispatcher parts to be wrong.
 
-## 🚀 Quick start
+## Quick start
 
 Pick one way to connect. Both give the assistant the same tools.
 
 | Option | Best for | Command |
 |---|---|---|
-| ☁️ **Hosted (HTTP)** | zero setup | `claude mcp add --transport http tgbotbase https://tbf-mcp.severnbli.dev/mcp` |
-| 🐳 **Local (stdio)** | reliability, offline | `claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-mcp:8.0.0-preview.2` |
+| **Hosted (HTTP)** | zero setup | `claude mcp add --transport http tgbotbase https://tbf-mcp.severnbli.dev/mcp` |
+| **Local (stdio)** | reliability, offline | `claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-mcp:8.0.0-preview.2` |
 
 > [!WARNING]
 > Keep the `-i` flag in the local command. Without it the container's stdin closes and the connection fails immediately.
@@ -51,7 +47,7 @@ Pick one way to connect. Both give the assistant the same tools.
 > [!NOTE]
 > The public instance is a free, read-only, best-effort service: rate limited, no uptime guarantee, no token needed.
 > If the server owner enabled a token, add `--header "Authorization: Bearer <token>"`.
-> For reliability, run the local image or [host your own](#-hosting-on-a-vps).
+> For reliability, run the local image or [host your own](#hosting-on-a-vps).
 
 <details>
 <summary><b>Other MCP clients (JSON config)</b></summary>
@@ -69,23 +65,23 @@ The answer should mention `8.0.0-preview.2` and commit `6780abf`.
 > [!TIP]
 > Pin the image tag (`:8.0.0-preview.2`) in your client config. Prereleases never get the `latest` tag.
 
-## 🧰 Tools
+## Tools
 
 The server also sends usage instructions to the client, so assistants start with `ask` for any how-to question.
 
-| | Tool | Use it to |
-|---|---|---|
-| 💬 | **`ask`** | **Start here.** One call searches the guide, pitfalls, types and README and says what to read next |
-| 📚 | `list_guide_sections`, `get_guide_section`, `search_guide` | Read the curated guide: decision tables (message loop / dispatcher / serializer), patterns, ship checklist. `search_guide` takes a plain-English question and returns ranked sections with snippets |
-| 🩹 | `get_gotchas` | Describe a problem or error name and get the known cause and fix |
-| 🏷️ | `framework_version` | See the TelegramBotBase version, commit and dependencies (e.g. `Telegram.Bot`) the answers are based on |
-| 🧩 | `list_symbols`, `get_symbol` | Find C# types by name; see doc comment, base types and public members (typos get "did you mean") |
-| 🌳 | `find_subclasses` | Everything deriving from or implementing a type (`FormBase`, `ControlBase`, `IStateMachine`) |
-| 🔍 | `search_code` | Case-insensitive substring search of the source (`path_prefix` and `extension` narrow it) |
-| 📄 | `get_file`, `list_files` | Read any file (optionally a line range) or list files under a path |
-| 🧪 | `list_examples` | List example and test-bot source files |
-| 📖 | `list_doc_sections`, `get_doc_section` | Browse and read the framework README (Quick start, ButtonGrid, State Machines, ...) |
-| 🔄 | `get_changes`, `list_refs` | Public API diff between two tags/commits, for example before an upgrade |
+| Tool | Use it to |
+|---|---|
+| **`ask`** | **Start here.** One call searches the guide, pitfalls, types and README and says what to read next |
+| `list_guide_sections`, `get_guide_section`, `search_guide` | Read the curated guide: decision tables (message loop / dispatcher / serializer), patterns, ship checklist. `search_guide` takes a plain-English question and returns ranked sections with snippets |
+| `get_gotchas` | Describe a problem or error name and get the known cause and fix |
+| `framework_version` | See the TelegramBotBase version, commit and dependencies (e.g. `Telegram.Bot`) the answers are based on |
+| `list_symbols`, `get_symbol` | Find C# types by name; see doc comment, base types and public members (typos get "did you mean") |
+| `find_subclasses` | Everything deriving from or implementing a type (`FormBase`, `ControlBase`, `IStateMachine`) |
+| `search_code` | Case-insensitive substring search of the source (`path_prefix` and `extension` narrow it) |
+| `get_file`, `list_files` | Read any file (optionally a line range) or list files under a path |
+| `list_examples` | List example and test-bot source files |
+| `list_doc_sections`, `get_doc_section` | Browse and read the framework README (Quick start, ButtonGrid, State Machines, ...) |
+| `get_changes`, `list_refs` | Public API diff between two tags/commits, for example before an upgrade |
 
 **Resources:** `tgbotbase://readme` (the framework README) and `tgbotbase://guide` (the full guide).
 
@@ -94,7 +90,7 @@ The server also sends usage instructions to the client, so assistants start with
 > comparing public APIs, but can miss unusual declarations, and `get_changes` may list a few false positives (for example
 > a word inside a comment reported as a type). For exact behavior, read the file with `get_file`.
 
-## 💡 Example prompts
+## Example prompts
 
 - "Using tgbotbase, write a form with a paged `ButtonGrid`. Check the real `ButtonGrid` source for the API."
 - "Which controls exist and how do they differ? Use `find_subclasses` on `ControlBase`."
@@ -108,7 +104,7 @@ The server also sends usage instructions to the client, so assistants start with
 > tell the assistant to *verify against the source* (`get_symbol`, `get_file`) instead of answering from memory,
 > and give it your bot's framework version so it can compare with `framework_version`.
 
-## 💻 Hosting on a VPS
+## Hosting on a VPS
 
 Runs the container on `127.0.0.1:8000` and puts host nginx in front of it with TLS and per-IP rate limiting.
 The server is **public by default**; a bearer token is optional ([see below](#optional-require-a-bearer-token)).
@@ -123,7 +119,7 @@ docker compose up -d
 The compose file runs the container read-only with a 512 MB memory and 1 CPU limit.
 > [!NOTE]
 > the image tag `8.0.0-preview.2` exists on Docker Hub only after the first publish from `main` (see
-> [CI and publishing](#-ci-and-publishing)). Before that, `docker compose up` fails with "not found".
+> [CI and publishing](#ci-and-publishing)). Before that, `docker compose up` fails with "not found".
 
 ### 2. Configure nginx
 ```bash
@@ -168,7 +164,7 @@ cd deploy && docker compose pull && docker compose up -d
 > the port is bound to `127.0.0.1` on purpose. Do not change it to `0.0.0.0`: that would bypass nginx's rate
 > limits (and the token, if enabled).
 
-## 📦 Upgrading the framework version
+## Upgrading the framework version
 
 1. Build with the new ref (a tag or commit SHA) and version:
    ```bash
@@ -184,7 +180,7 @@ cd deploy && docker compose pull && docker compose up -d
 > the repo does not tag NuGet releases (there is no `v7.2.0` or `v8.0.0-preview.2`). Match the NuGet publish date to a commit on
 > `master` and pin that commit SHA.
 
-## 🔧 CI and publishing
+## CI and publishing
 
 - `ci.yml` runs on every pull request: builds the image, runs `tests/smoke.py` and `tests/test_search.py` (search quality) inside it, and runs `tests/check_guide.py`,
   which fails if the guide mentions a source file that no longer exists in the pinned source (so a version bump can't silently leave the guide stale).
@@ -198,8 +194,5 @@ cd deploy && docker compose pull && docker compose up -d
 
 ---
 
-<div align="center">
-
 MIT licensed · Not affiliated with the TelegramBotBase authors · Built on the [Model Context Protocol](https://modelcontextprotocol.io)
 
-</div>
