@@ -18,15 +18,20 @@ claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-
 ```
 > **Warning:** keep the `-i` flag. Without it the container's stdin closes and the connection fails immediately.
 
-### Hosted (HTTP, bearer token)
+### Hosted (HTTP)
+The public instance needs no token:
 ```bash
-claude mcp add --transport http tgbotbase https://mcp.example.com/mcp \
-  --header "Authorization: Bearer <token>"
+claude mcp add --transport http tgbotbase https://tbf-mcp.severnbli.dev/mcp
 ```
+If the server owner enabled a token, add `--header "Authorization: Bearer <token>"`.
+
+> **Note:** the public instance is a free, read-only, best-effort service: rate limited, no uptime guarantee. For
+> reliability, run the [local](#local-stdio-no-token) image or [host your own](#hosting-on-a-vps).
+
 See [Hosting on a VPS](#hosting-on-a-vps) to run your own copy.
 
 ### Other MCP clients
-Use the URL and `Authorization` header above, or this stdio config:
+Use the URL above (plus the `Authorization` header if a token is enabled), or this stdio config:
 ```json
 { "mcpServers": { "tgbotbase": { "command": "docker",
   "args": ["run", "-i", "--rm", "severnbli/telegram-bot-framework-mcp:7.2.0"] } } }
@@ -46,7 +51,7 @@ The answer should mention `7.2.0` and commit `13fff09c`.
 | `list_doc_sections`, `get_doc_section` | Browse and read README sections (Quick start, ButtonGrid, State Machines, ...) |
 | `list_symbols`, `get_symbol` | Find C# types by name; see doc comment, base types and public members |
 | `find_subclasses` | Find everything deriving from or implementing a type (`FormBase`, `ControlBase`, `IStateMachine`) |
-| `search_code` | Search the source by substring or regex (`path_prefix` and `extension` narrow it) |
+| `search_code` | Case-insensitive substring search of the source (`path_prefix` and `extension` narrow it) |
 | `get_file`, `list_files` | Read any file (optionally a line range) or list files under a path |
 | `list_examples` | List example and test-bot source files |
 | `get_changes`, `list_refs` | Public API diff between two tags/commits, for example before an upgrade |
@@ -68,45 +73,54 @@ Resource: `tgbotbase://readme` (the full README).
 
 ## Hosting on a VPS
 
-Runs the container on `127.0.0.1:8000` and puts host nginx in front of it with TLS and a bearer-token check.
+Runs the container on `127.0.0.1:8000` and puts host nginx in front of it with TLS and per-IP rate limiting.
+The server is **public by default**; a bearer token is optional ([see below](#optional-require-a-bearer-token)).
 
-**Requirements:** Docker, nginx and certbot on the VPS; a DNS A record for `mcp.example.com` pointing at it; ports 80 and 443 open.
+**Requirements:** Docker, nginx and certbot on the VPS; a DNS A record for `tbf-mcp.severnbli.dev` pointing at it; ports 80 and 443 open.
 
 ### 1. Start the container
 ```bash
 cd deploy && cp .env.example .env
 docker compose up -d
 ```
+The compose file runs the container read-only with a 512 MB memory and 1 CPU limit.
 > **Note:** the image tags `latest` and `7.2.0` exist on Docker Hub only after the first publish from `main` (see
 > [CI and publishing](#ci-and-publishing)). Before that, `docker compose up` fails with "not found".
 
 ### 2. Configure nginx
-Generate a token (`openssl rand -hex 32`) and put it in a copy of `deploy/nginx.conf` in place of `CHANGE_ME_TOKEN`:
 ```bash
 sudo cp nginx.conf /etc/nginx/sites-available/tgbotbase-mcp
 sudo ln -s /etc/nginx/sites-available/tgbotbase-mcp /etc/nginx/sites-enabled/
-sudo certbot certonly --nginx -d mcp.example.com
+sudo certbot certonly --nginx -d tbf-mcp.severnbli.dev
 sudo nginx -t && sudo systemctl reload nginx
 ```
-> **Warning:** edit the token in the copy under `/etc/nginx`, never in the repo file. Do not commit a real token.
-> Anyone who has it can use the server.
-
 > **Warning:** on a fresh VPS the certificate does not exist yet, so `nginx -t` fails on the 443 block. Comment that
 > block out, run certbot, then restore it. `http2 on;` needs nginx 1.25.1 or newer; on older versions remove it and
 > write `listen 443 ssl http2;`.
 
 ### 3. Verify
 ```bash
-curl -i https://mcp.example.com/mcp                                   # expect 401
-curl -i -H "Authorization: Bearer <token>" https://mcp.example.com/mcp # expect a response from the MCP server (not 401)
+curl -i https://tbf-mcp.severnbli.dev/mcp   # public mode: any response from the MCP server except 401/404/502
 ```
+
+### Optional: require a bearer token
+A bearer token is a secret string the client sends as `Authorization: Bearer <token>`. To enable it, edit the copy in
+`/etc/nginx/sites-available/tgbotbase-mcp`:
+1. Generate a token: `openssl rand -hex 32`.
+2. In the `map` block change `default 1;` to `default 0;` and uncomment the `"Bearer ..."` line with your token.
+3. `sudo nginx -t && sudo systemctl reload nginx`, then connect clients with
+   `--header "Authorization: Bearer <token>"`. Requests without it get 401.
+
+> **Warning:** put the token only in the copy under `/etc/nginx`, never in the repo file. Do not commit a real token.
+> Anyone who has it can use the server. Use HTTPS only, since the token travels in a header.
 
 ### Updating
 ```bash
 cd deploy && docker compose pull && docker compose up -d
 ```
 
-> **Tip:** the port is bound to `127.0.0.1` on purpose. Do not change it to `0.0.0.0` or the token check can be bypassed.
+> **Tip:** the port is bound to `127.0.0.1` on purpose. Do not change it to `0.0.0.0`: that would bypass nginx's rate
+> limits (and the token, if enabled).
 
 ## Upgrading the framework version
 
