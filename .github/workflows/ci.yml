@@ -25,3 +25,5 @@ jobs:
         run: |
           VERSION=$(sed -n 's/^ARG TGBOTBASE_NUGET_VERSION=//p' Dockerfile)
           docker run --rm -v "$PWD/tests:/tests:ro" --entrypoint python tgbotbase-mcp:test /tests/smoke.py "$VERSION"
+      - name: Guide matches pinned source
+        run: docker run --rm -v "$PWD/tests:/tests:ro" --entrypoint python tgbotbase-mcp:test /tests/check_guide.py
