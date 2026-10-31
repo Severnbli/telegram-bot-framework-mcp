@@ -1,0 +1,16 @@
+services:
+  mcp:
+    image: severnbli/telegram-bot-framework-mcp:${TGBOTBASE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      TGBOTBASE_TRANSPORT: streamable-http
+      FASTMCP_HOST: 0.0.0.0
+      FASTMCP_PORT: "8000"
+    # reachable only from the VPS itself; nginx on the host proxies to it
+    ports: ["127.0.0.1:8000:8000"]
+    # public-instance safeguards
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 512m
+    cpus: 1.0
+    security_opt: ["no-new-privileges:true"]
