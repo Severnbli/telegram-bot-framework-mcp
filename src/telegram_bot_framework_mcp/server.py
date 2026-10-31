@@ -15,6 +15,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 REPO_DIR = Path(os.environ.get("TGBOTBASE_DIR", "/data/repo"))
+GUIDE_PATH = Path(os.environ.get("TGBOTBASE_GUIDE", "/data/knowledge/SKILL.md"))
 NUGET_VERSION = os.environ.get("TGBOTBASE_NUGET_VERSION", "unknown")
 MAX_CHARS = 40_000
 SRC_PREFIXES = ("TelegramBotBase", "Examples")
@@ -165,7 +166,10 @@ def get_symbol(name: str) -> str:
         if t["name"].split("<")[0] == name.split("<")[0]:
             res.append(f"{t['kind']} {t['name']}" + (f" : {t['bases']}" if t["bases"] else "")
                        + f"\nfile: {path}\ndoc: {t['doc'] or '-'}\nmembers:\n  " + "\n  ".join(t["members"]))
-    return _clip("\n\n".join(res)) or f"No type named {name!r}."
+    if not res:
+        return f"No type named {name!r}."
+    hints = _guide_hints(name.split("<")[0])
+    return _clip("\n\n".join(res)) + (f"\n\nGuide mentions it in: {'; '.join(hints)} (use get_guide_section)" if hints else "")
 
 
 @mcp.tool()
@@ -244,6 +248,81 @@ def get_doc_section(title: str) -> str:
 def list_examples() -> str:
     """List C# example and test-bot files."""
     return _clip("\n".join(p for p in _files() if p.startswith(("Examples/", "TelegramBotBase.Test/")) and p.endswith(".cs")))
+
+
+# ---------- curated guide (knowledge/SKILL.md) ----------
+@lru_cache(maxsize=1)
+def _guide_sections() -> tuple[tuple[str, str], ...]:
+    """Split the guide into (heading, body) at ## and ### headings, ignoring fenced code."""
+    if not GUIDE_PATH.is_file():
+        return ()
+    secs, fence, cur = [], False, None
+    for line in GUIDE_PATH.read_text("utf-8").splitlines():
+        if line.startswith("```"):
+            fence = not fence
+        m = None if fence else re.match(r"^#{2,3}\s+(.*)", line)
+        if m:
+            cur = [m[1].strip(), [line]]
+            secs.append(cur)
+        elif cur:
+            cur[1].append(line)
+    return tuple((t, "\n".join(b)) for t, b in secs)
+
+
+def _guide_hints(name: str) -> list[str]:
+    return [t for t, b in _guide_sections() if re.search(rf"\b{re.escape(name)}\b", b)][:5]
+
+
+@mcp.tool()
+def list_guide_sections() -> str:
+    """List sections of the curated how-to guide (decision tables, patterns, gotchas, checklist)."""
+    return "\n".join(t for t, _ in _guide_sections()) or "No guide installed."
+
+
+@mcp.tool()
+def get_guide_section(query: str) -> str:
+    """Read guide section(s) by number or partial title, e.g. '3.4', 'Navigation', 'Checklist'."""
+    q = query.lower().strip()
+    m = [b for t, b in _guide_sections() if t.lower().startswith(q.rstrip(".") + ".") or t.lower() == q]
+    m = m or [b for t, b in _guide_sections() if q in t.lower()]
+    return _clip("\n\n".join(m[:3])) if m else f"No guide section {query!r}. Use list_guide_sections."
+
+
+@mcp.tool()
+def search_guide(query: str, max_results: int = 15) -> str:
+    """Case-insensitive search of the guide; returns matching lines with their section."""
+    q, out = query.lower(), []
+    for t, b in _guide_sections():
+        for line in b.splitlines():
+            if q in line.lower():
+                out.append(f"[{t}] {line.strip()}")
+                if len(out) >= min(max_results, 50):
+                    return "\n".join(out)
+    return "\n".join(out) or "No matches."
+
+
+@mcp.tool()
+def get_gotchas(symptom: str = "") -> str:
+    """Known pitfalls as 'symptom -> cause & fix'. Pass words of your problem (e.g. 'spins forever'), or nothing for all."""
+    rows = []
+    for t, b in _guide_sections():
+        if "gotchas" in t.lower():
+            for line in b.splitlines():
+                if line.startswith("|") and not re.match(r"^\|[-| ]+\|$", line):
+                    cells = [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+                    if len(cells) >= 2 and cells[0].lower() != "symptom":
+                        rows.append((cells[0], cells[1]))
+    words = [w for w in re.findall(r"\w+", symptom.lower()) if len(w) > 2]
+    if words:
+        scored = sorted(((sum(w in (a + " " + c).lower() for w in words), a, c) for a, c in rows), reverse=True)
+        rows = [(a, c) for n, a, c in scored if n][:5]
+    return "\n\n".join(f"Symptom: {a}\nCause/fix: {c}" for a, c in rows) or "No matching gotcha."
+
+
+@mcp.resource("tgbotbase://guide")
+def guide_resource() -> str:
+    """Curated how-to guide."""
+    return GUIDE_PATH.read_text("utf-8") if GUIDE_PATH.is_file() else ""
 
 
 @mcp.resource("tgbotbase://readme")

@@ -27,6 +27,10 @@ check(".cs:" in s.search_code("ButtonGrid", path_prefix="TelegramBotBase"), "sea
 check(s.list_examples().strip() != "", "list_examples")
 check(s.get_file("README.md", 1, 3).startswith("1:"), "get_file line range")
 check(s.get_file("../etc/passwd").startswith("File not found"), "path traversal rejected")
+check("Quick start" in s.list_guide_sections() or "Project setup" in s.list_guide_sections(), "list_guide_sections")
+check("ConfirmAction" in s.get_gotchas("button spins forever"), "get_gotchas finds ConfirmAction")
+check("Message loop" in s.get_guide_section("3.4") or "message loop" in s.get_guide_section("3.4").lower(), "get_guide_section 3.4")
+check("RequestDispatcher" in s.search_guide("dispatcher"), "search_guide")
 changes = s.get_changes("v7.1.0", "HEAD")
 check(changes.startswith("API diff v7.1.0 -> HEAD"), "get_changes v7.1.0..HEAD")
 
@@ -40,5 +44,5 @@ send({"jsonrpc": "2.0", "method": "notifications/initialized"})
 send({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
 tools = {t["name"] for t in json.loads(p.stdout.readline())["result"]["tools"]}
 p.kill()
-check({"framework_version", "get_changes", "get_symbol", "search_code"} <= tools, f"stdio tools/list ({len(tools)} tools)")
+check({"framework_version", "get_changes", "get_symbol", "search_code", "get_guide_section", "get_gotchas"} <= tools, f"stdio tools/list ({len(tools)} tools)")
 print("all smoke tests passed")

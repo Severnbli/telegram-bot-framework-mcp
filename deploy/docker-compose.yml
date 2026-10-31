@@ -1,6 +1,6 @@
 services:
   mcp:
-    image: severnbli/telegram-bot-framework-mcp:${TGBOTBASE_TAG:-latest}
+    image: severnbli/telegram-bot-framework-mcp:${TGBOTBASE_TAG:-8.0.0-preview.2}
     restart: unless-stopped
     environment:
       TGBOTBASE_TRANSPORT: streamable-http
