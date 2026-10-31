@@ -1,0 +1,24 @@
+services:
+  mcp:
+    image: severnbli/telegram-bot-framework-mcp:${TGBOTBASE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      TGBOTBASE_TRANSPORT: streamable-http
+      FASTMCP_HOST: 0.0.0.0
+      FASTMCP_PORT: "8000"
+    expose: ["8000"]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      MCP_DOMAIN: ${MCP_DOMAIN:?set in .env}
+      MCP_TOKEN: ${MCP_TOKEN:?set in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [mcp]
+
+volumes:
+  caddy_data:

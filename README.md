@@ -23,3 +23,16 @@ Version bump: `docker build --build-arg TGBOTBASE_REF=<tag|sha> --build-arg TGBO
 ```
 claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-mcp:7.2.0
 ```
+
+## Hosting on a VPS
+Needs Docker + compose on the VPS, and a DNS A record for your domain pointing at it (ports 80/443 open).
+```
+cd deploy && cp .env.example .env   # set MCP_DOMAIN and MCP_TOKEN (openssl rand -hex 32)
+docker compose up -d
+```
+Caddy obtains the TLS certificate automatically and rejects requests without `Authorization: Bearer $MCP_TOKEN`.
+Connect a client:
+```
+claude mcp add --transport http tgbotbase https://mcp.example.com/mcp --header "Authorization: Bearer <token>"
+```
+Update to a new image: `docker compose pull && docker compose up -d`.

@@ -1,0 +1,7 @@
+{$MCP_DOMAIN} {
+	# automatic HTTPS; reject anything without the bearer token
+	@unauth not header Authorization "Bearer {$MCP_TOKEN}"
+	respond @unauth "unauthorized" 401
+
+	reverse_proxy mcp:8000
+}
