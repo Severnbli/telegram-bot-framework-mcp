@@ -24,14 +24,21 @@ Version bump: `docker build --build-arg TGBOTBASE_REF=<tag|sha> --build-arg TGBO
 claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-mcp:7.2.0
 ```
 
-## Hosting on a VPS
-Needs Docker + compose on the VPS, and a DNS A record for your domain pointing at it (ports 80/443 open).
+## Hosting on a VPS (Docker + host nginx)
+Needs Docker and nginx on the VPS, and a DNS A record for your domain pointing at it.
 ```
-cd deploy && cp .env.example .env   # set MCP_DOMAIN and MCP_TOKEN (openssl rand -hex 32)
-docker compose up -d
+cd deploy && cp .env.example .env
+docker compose up -d                 # listens on 127.0.0.1:8000 only
 ```
-Caddy obtains the TLS certificate automatically and rejects requests without `Authorization: Bearer $MCP_TOKEN`.
-Connect a client:
+Then set up nginx using `deploy/nginx.conf`: replace `mcp.example.com` and `CHANGE_ME_TOKEN`
+(`openssl rand -hex 32`), install it as a site, get a certificate and reload:
+```
+sudo cp nginx.conf /etc/nginx/sites-available/tgbotbase-mcp
+sudo ln -s /etc/nginx/sites-available/tgbotbase-mcp /etc/nginx/sites-enabled/
+sudo certbot certonly --nginx -d mcp.example.com   # if the cert doesn't exist yet, comment out the 443 block first
+sudo nginx -t && sudo systemctl reload nginx
+```
+Requests without `Authorization: Bearer <token>` get 401. Connect a client:
 ```
 claude mcp add --transport http tgbotbase https://mcp.example.com/mcp --header "Authorization: Bearer <token>"
 ```

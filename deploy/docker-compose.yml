@@ -6,19 +6,5 @@ services:
       TGBOTBASE_TRANSPORT: streamable-http
       FASTMCP_HOST: 0.0.0.0
       FASTMCP_PORT: "8000"
-    expose: ["8000"]
-
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    ports: ["80:80", "443:443"]
-    environment:
-      MCP_DOMAIN: ${MCP_DOMAIN:?set in .env}
-      MCP_TOKEN: ${MCP_TOKEN:?set in .env}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-    depends_on: [mcp]
-
-volumes:
-  caddy_data:
+    # reachable only from the VPS itself; nginx on the host proxies to it
+    ports: ["127.0.0.1:8000:8000"]
