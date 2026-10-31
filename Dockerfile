@@ -13,5 +13,10 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install --no-cache-dir .
 
+# Run as an unprivileged user; the cloned source stays owned by root (read-only for the app)
+RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin mcp \
+    && git config --system --add safe.directory /data/repo
+USER mcp
+
 ENV PYTHONUNBUFFERED=1 TGBOTBASE_DIR=/data/repo TGBOTBASE_NUGET_VERSION=${TGBOTBASE_NUGET_VERSION}
 ENTRYPOINT ["telegram-bot-framework-mcp"]
