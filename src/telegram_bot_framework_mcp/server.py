@@ -20,7 +20,13 @@ NUGET_VERSION = os.environ.get("TGBOTBASE_NUGET_VERSION", "unknown")
 MAX_CHARS = 40_000
 SRC_PREFIXES = ("TelegramBotBase", "Examples")
 
-mcp = FastMCP("telegram-bot-framework")
+# host/port are passed explicitly: inside Docker the server must listen on 0.0.0.0 (the compose file
+# publishes the port on the host's 127.0.0.1 only), and relying on FASTMCP_* env alone proved fragile.
+mcp = FastMCP(
+    "telegram-bot-framework",
+    host=os.environ.get("FASTMCP_HOST", "127.0.0.1"),
+    port=int(os.environ.get("FASTMCP_PORT", "8000")),
+)
 
 
 # ---------- helpers ----------

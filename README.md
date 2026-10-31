@@ -108,6 +108,10 @@ sudo nginx -t && sudo systemctl reload nginx
 > block out, run certbot, then restore it. `http2 on;` needs nginx 1.25.1 or newer; on older versions remove it and
 > write `listen 443 ssl http2;`.
 
+> **Note:** the config assumes the domain is proxied through Cloudflare (orange cloud). It trusts `CF-Connecting-IP`
+> only from Cloudflare's published ranges, so rate limits apply per real visitor. If you are not behind Cloudflare,
+> delete the `set_real_ip_from` / `real_ip_header` lines. Set Cloudflare SSL/TLS mode to *Full (strict)*.
+
 ### 3. Verify
 ```bash
 curl -i https://tbf-mcp.severnbli.dev/mcp   # public mode: any response from the MCP server except 401/404/502
