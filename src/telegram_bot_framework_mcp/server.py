@@ -194,14 +194,17 @@ def get_file(path: str, start_line: int = 1, end_line: int = 0) -> str:
 
 
 @mcp.tool()
-def search_code(query: str, extension: str = ".cs", path_prefix: str = "", regex: bool = False, max_results: int = 30) -> str:
-    """Search the source (substring or regex) and return path:line: text."""
-    pat = re.compile(query if regex else re.escape(query), re.I)
+def search_code(query: str, extension: str = ".cs", path_prefix: str = "", max_results: int = 30) -> str:
+    """Case-insensitive substring search of the source; returns path:line: text."""
+    if not query or len(query) > 200:
+        return "Query must be 1-200 characters."
+    q = query.lower()
+    max_results = min(max_results, 100)
     out = []
     for p in _files():
         if p.endswith(extension) and p.startswith(path_prefix) and (f := _safe(p)):
             for n, line in enumerate(f.read_text("utf-8", "replace").splitlines(), 1):
-                if pat.search(line):
+                if q in line.lower():
                     out.append(f"{p}:{n}: {line.strip()}")
                     if len(out) >= max_results:
                         return "\n".join(out)
