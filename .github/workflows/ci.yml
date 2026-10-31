@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: tgbotbase-mcp:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke tests
+        run: |
+          VERSION=$(sed -n 's/^ARG TGBOTBASE_NUGET_VERSION=//p' Dockerfile)
+          docker run --rm -v "$PWD/tests:/tests:ro" --entrypoint python tgbotbase-mcp:test /tests/smoke.py "$VERSION"
