@@ -1,93 +1,134 @@
 # telegram-bot-framework-mcp
 
-Dockerized MCP server over the source of [MajMcCloud/TelegramBotFramework](https://github.com/MajMcCloud/TelegramBotFramework)
-(NuGet `TelegramBotBase`), pinned to **7.2.0** (master commit `13fff09c`).
+An [MCP](https://modelcontextprotocol.io) server that lets an AI assistant read the real source, docs and API changes of
+[MajMcCloud/TelegramBotFramework](https://github.com/MajMcCloud/TelegramBotFramework) (NuGet: `TelegramBotBase`).
+It ships as a Docker image with the framework source baked in, pinned to **7.2.0** (master commit `13fff09c`).
 
-## Build / register
-```
-docker build -t tgbotbase-mcp:7.2.0 .
-claude mcp add tgbotbase -- docker run -i --rm tgbotbase-mcp:7.2.0
-```
-Version bump: `docker build --build-arg TGBOTBASE_REF=<tag|sha> --build-arg TGBOTBASE_NUGET_VERSION=<x.y.z> -t tgbotbase-mcp:<x.y.z> .`
+**Contents:** [Quick start](#quick-start) · [Tools](#tools) · [Example prompts](#example-prompts) ·
+[Hosting on a VPS](#hosting-on-a-vps) · [Upgrading the framework version](#upgrading-the-framework-version) ·
+[CI and publishing](#ci-and-publishing)
 
-## Tools
-`framework_version`, `get_changes(from_ref, to_ref)`, `list_refs`, `list_symbols`, `get_symbol`, `find_subclasses`,
-`list_files`, `get_file`, `search_code`, `list_doc_sections`, `get_doc_section`, `list_examples`. Resource: `tgbotbase://readme`.
+## Quick start
 
-## Using the server
+Pick one way to connect. Both give the assistant the same tools.
 
-### 1. Connect
-Hosted (`https://mcp.example.com/mcp`, needs the bearer token):
-```
-claude mcp add --transport http tgbotbase https://mcp.example.com/mcp --header "Authorization: Bearer <token>"
-```
-Local (no hosting, no token):
-```
+### Local (stdio, no token)
+```bash
 claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-mcp:7.2.0
 ```
-Other MCP clients: use the same URL and `Authorization` header (HTTP), or the `docker run -i --rm ...` command (stdio):
+> **Warning:** keep the `-i` flag. Without it the container's stdin closes and the connection fails immediately.
+
+### Hosted (HTTP, bearer token)
+```bash
+claude mcp add --transport http tgbotbase https://mcp.example.com/mcp \
+  --header "Authorization: Bearer <token>"
+```
+See [Hosting on a VPS](#hosting-on-a-vps) to run your own copy.
+
+### Other MCP clients
+Use the URL and `Authorization` header above, or this stdio config:
 ```json
 { "mcpServers": { "tgbotbase": { "command": "docker",
   "args": ["run", "-i", "--rm", "severnbli/telegram-bot-framework-mcp:7.2.0"] } } }
 ```
-Check it works: run `/mcp` in Claude Code, or ask "what framework version does tgbotbase serve?".
 
-### 2. Tools
+### Check it works
+Run `/mcp` in Claude Code, or ask: *"What framework version does tgbotbase serve?"*
+The answer should mention `7.2.0` and commit `13fff09c`.
+
+> **Tip:** pin the image tag (`:7.2.0`) in your client config instead of `:latest`, so answers don't change under you when a new image is published.
+
+## Tools
+
 | Tool | Use it to |
 |---|---|
-| `framework_version` | See which TelegramBotBase version, commit and dependencies (e.g. `Telegram.Bot`) the answers are based on |
-| `list_doc_sections` / `get_doc_section` | Browse and read README sections (Quick start, ButtonGrid, State Machines, ...) |
-| `list_symbols` / `get_symbol` | Find C# types by name; see doc comment, base types, public members |
-| `find_subclasses` | Find everything deriving from/implementing a type (`FormBase`, `ControlBase`, `IStateMachine`) |
-| `search_code` | Search source by substring or regex (`path_prefix`, `extension` narrow it) |
-| `get_file` / `list_files` | Read any file (with line ranges) or list files under a path |
-| `list_examples` | Example and test-bot source files |
-| `get_changes` / `list_refs` | Public API diff between two tags/commits, e.g. before upgrading |
+| `framework_version` | See the TelegramBotBase version, commit and dependencies (e.g. `Telegram.Bot`) the answers are based on |
+| `list_doc_sections`, `get_doc_section` | Browse and read README sections (Quick start, ButtonGrid, State Machines, ...) |
+| `list_symbols`, `get_symbol` | Find C# types by name; see doc comment, base types and public members |
+| `find_subclasses` | Find everything deriving from or implementing a type (`FormBase`, `ControlBase`, `IStateMachine`) |
+| `search_code` | Search the source by substring or regex (`path_prefix` and `extension` narrow it) |
+| `get_file`, `list_files` | Read any file (optionally a line range) or list files under a path |
+| `list_examples` | List example and test-bot source files |
+| `get_changes`, `list_refs` | Public API diff between two tags/commits, for example before an upgrade |
 
-Resource: `tgbotbase://readme` (full README).
+Resource: `tgbotbase://readme` (the full README).
 
-### 3. Example prompts
-- "Using tgbotbase, write a form with a paged ButtonGrid; check the real `ButtonGrid` source for the API."
-- "Which controls exist and how do they differ? Use `find_subclasses ControlBase`."
+> **Note:** the symbol index is built with regular expressions, not a C# compiler. It is good for finding types and
+> comparing public APIs, but can miss unusual declarations. For exact behavior, read the file with `get_file`.
+
+## Example prompts
+
+- "Using tgbotbase, write a form with a paged `ButtonGrid`. Check the real `ButtonGrid` source for the API."
+- "Which controls exist and how do they differ? Use `find_subclasses` on `ControlBase`."
 - "How do I persist user sessions across restarts? Look at the state machine classes."
 - "What changed in the public API between v7.1.0 and the current version?"
 
-Tips: tell the assistant to *verify against the source* (`get_symbol` / `get_file`) rather than answer from memory, and
-mention your bot's framework version so it can compare with `framework_version`.
+> **Tip:** tell the assistant to *verify against the source* (`get_symbol`, `get_file`) instead of answering from memory,
+> and give it your bot's framework version so it can compare with `framework_version`.
 
-### 4. Upgrading the framework version
-```
-docker build --build-arg TGBOTBASE_REF=<tag|sha> --build-arg TGBOTBASE_NUGET_VERSION=<x.y.z> -t tgbotbase-mcp:<x.y.z> .
-```
-Update the defaults in the `Dockerfile` and merge to `main` to publish; on the VPS run `docker compose pull && docker compose up -d`.
-Before bumping your bot, ask for `get_changes` between the old and new ref to see what to adapt.
+## Hosting on a VPS
 
-## CI / publishing
-- `ci.yml` runs on every PR: builds the image and runs `tests/smoke.py` inside it.
-- `publish.yml` runs only on push to `main` or manual dispatch on `main`: re-runs CI, then pushes
-  `severnbli/telegram-bot-framework-mcp:latest` and `:<framework version>` (read from the Dockerfile) to Docker Hub.
-  Requires repo secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+Runs the container on `127.0.0.1:8000` and puts host nginx in front of it with TLS and a bearer-token check.
 
-```
-claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-mcp:7.2.0
-```
+**Requirements:** Docker, nginx and certbot on the VPS; a DNS A record for `mcp.example.com` pointing at it; ports 80 and 443 open.
 
-## Hosting on a VPS (Docker + host nginx)
-Needs Docker and nginx on the VPS, and a DNS A record for your domain pointing at it.
-```
+### 1. Start the container
+```bash
 cd deploy && cp .env.example .env
-docker compose up -d                 # listens on 127.0.0.1:8000 only
+docker compose up -d
 ```
-Then set up nginx using `deploy/nginx.conf`: replace `CHANGE_ME_TOKEN`
-(`openssl rand -hex 32`), install it as a site, get a certificate and reload:
-```
+> **Note:** the image tags `latest` and `7.2.0` exist on Docker Hub only after the first publish from `main` (see
+> [CI and publishing](#ci-and-publishing)). Before that, `docker compose up` fails with "not found".
+
+### 2. Configure nginx
+Generate a token (`openssl rand -hex 32`) and put it in a copy of `deploy/nginx.conf` in place of `CHANGE_ME_TOKEN`:
+```bash
 sudo cp nginx.conf /etc/nginx/sites-available/tgbotbase-mcp
 sudo ln -s /etc/nginx/sites-available/tgbotbase-mcp /etc/nginx/sites-enabled/
-sudo certbot certonly --nginx -d mcp.example.com   # if the cert doesn't exist yet, comment out the 443 block first
+sudo certbot certonly --nginx -d mcp.example.com
 sudo nginx -t && sudo systemctl reload nginx
 ```
-Requests without `Authorization: Bearer <token>` get 401. Connect a client:
+> **Warning:** edit the token in the copy under `/etc/nginx`, never in the repo file. Do not commit a real token.
+> Anyone who has it can use the server.
+
+> **Warning:** on a fresh VPS the certificate does not exist yet, so `nginx -t` fails on the 443 block. Comment that
+> block out, run certbot, then restore it. `http2 on;` needs nginx 1.25.1 or newer; on older versions remove it and
+> write `listen 443 ssl http2;`.
+
+### 3. Verify
+```bash
+curl -i https://mcp.example.com/mcp                                   # expect 401
+curl -i -H "Authorization: Bearer <token>" https://mcp.example.com/mcp # expect a response from the MCP server (not 401)
 ```
-claude mcp add --transport http tgbotbase https://mcp.example.com/mcp --header "Authorization: Bearer <token>"
+
+### Updating
+```bash
+cd deploy && docker compose pull && docker compose up -d
 ```
-Update to a new image: `docker compose pull && docker compose up -d`.
+
+> **Tip:** the port is bound to `127.0.0.1` on purpose. Do not change it to `0.0.0.0` or the token check can be bypassed.
+
+## Upgrading the framework version
+
+1. Build with the new ref (a tag or commit SHA) and version:
+   ```bash
+   docker build \
+     --build-arg TGBOTBASE_REF=<tag|sha> \
+     --build-arg TGBOTBASE_NUGET_VERSION=<x.y.z> \
+     -t tgbotbase-mcp:<x.y.z> .
+   ```
+2. Update the defaults in the `Dockerfile` and the pinned version in this README, then merge to `main` to publish.
+3. Before changing your bot, ask the assistant for `get_changes` between the old and new ref to see what to adapt.
+
+> **Tip:** the repo does not tag NuGet releases (there is no `v7.2.0`). Match the NuGet publish date to a commit on
+> `master` and pin that commit SHA.
+
+## CI and publishing
+
+- `ci.yml` runs on every pull request: builds the image and runs `tests/smoke.py` inside it.
+- `publish.yml` runs only on a push to `main` or a manual dispatch on `main`. It re-runs CI, then pushes
+  `severnbli/telegram-bot-framework-mcp:latest` and `:<framework version>` (read from the `Dockerfile`) to Docker Hub
+  for `linux/amd64` and `linux/arm64`.
+
+> **Warning:** publishing needs the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. Without them the
+> publish job fails at login.
