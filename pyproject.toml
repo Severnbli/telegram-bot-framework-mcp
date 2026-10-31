@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "MCP server exposing docs, examples and source of MajMcCloud/TelegramBotFramework (TelegramBotBase, .NET)"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["mcp>=1.2.0,<2"]
+dependencies = ["mcp>=1.9,<2"]
 
 [project.scripts]
 telegram-bot-framework-mcp = "telegram_bot_framework_mcp.server:main"

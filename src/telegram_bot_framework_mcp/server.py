@@ -251,7 +251,8 @@ def readme() -> str:
 
 
 def main() -> None:
-    mcp.run()
+    # stdio (default, for `docker run -i`) or streamable-http (for hosting; served at /mcp)
+    mcp.run(transport=os.environ.get("TGBOTBASE_TRANSPORT", "stdio"))
 
 
 if __name__ == "__main__":
