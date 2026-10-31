@@ -44,5 +44,5 @@ send({"jsonrpc": "2.0", "method": "notifications/initialized"})
 send({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
 tools = {t["name"] for t in json.loads(p.stdout.readline())["result"]["tools"]}
 p.kill()
-check({"framework_version", "get_changes", "get_symbol", "search_code", "get_guide_section", "get_gotchas"} <= tools, f"stdio tools/list ({len(tools)} tools)")
+check({"framework_version", "get_changes", "get_symbol", "search_code", "get_guide_section", "get_gotchas", "ask"} <= tools, f"stdio tools/list ({len(tools)} tools)")
 print("all smoke tests passed")
