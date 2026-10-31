@@ -2,7 +2,12 @@
 
 An [MCP](https://modelcontextprotocol.io) server that lets an AI assistant read the real source, docs and API changes of
 [MajMcCloud/TelegramBotFramework](https://github.com/MajMcCloud/TelegramBotFramework) (NuGet: `TelegramBotBase`).
-It ships as a Docker image with the framework source baked in, pinned to **7.2.0** (master commit `13fff09c`).
+It ships as a Docker image with the framework source baked in, pinned to **8.0.0-preview.2** (`development` branch, commit `6780abf`), together with a curated how-to guide.
+
+> **Warning:** 8.0.0-preview.2 is a **preview**; its API can still change before 8.0.0. The builder in this version has an extra
+> *request dispatcher* stage that does not exist in 7.x, so code from the guide will not compile against 7.2.0.
+> To serve 7.2.0 instead, build with `--build-arg TGBOTBASE_REF=13fff09c2736e4616f1d3c5dffe40401b92c81b0
+> --build-arg TGBOTBASE_NUGET_VERSION=7.2.0` and expect the guide's dispatcher parts to be wrong.
 
 **Contents:** [Quick start](#quick-start) · [Tools](#tools) · [Example prompts](#example-prompts) ·
 [Hosting on a VPS](#hosting-on-a-vps) · [Upgrading the framework version](#upgrading-the-framework-version) ·
@@ -14,7 +19,7 @@ Pick one way to connect. Both give the assistant the same tools.
 
 ### Local (stdio, no token)
 ```bash
-claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-mcp:7.2.0
+claude mcp add tgbotbase -- docker run -i --rm severnbli/telegram-bot-framework-mcp:8.0.0-preview.2
 ```
 > **Warning:** keep the `-i` flag. Without it the container's stdin closes and the connection fails immediately.
 
@@ -34,14 +39,14 @@ See [Hosting on a VPS](#hosting-on-a-vps) to run your own copy.
 Use the URL above (plus the `Authorization` header if a token is enabled), or this stdio config:
 ```json
 { "mcpServers": { "tgbotbase": { "command": "docker",
-  "args": ["run", "-i", "--rm", "severnbli/telegram-bot-framework-mcp:7.2.0"] } } }
+  "args": ["run", "-i", "--rm", "severnbli/telegram-bot-framework-mcp:8.0.0-preview.2"] } } }
 ```
 
 ### Check it works
 Run `/mcp` in Claude Code, or ask: *"What framework version does tgbotbase serve?"*
-The answer should mention `7.2.0` and commit `13fff09c`.
+The answer should mention `8.0.0-preview.2` and commit `6780abf`.
 
-> **Tip:** pin the image tag (`:7.2.0`) in your client config instead of `:latest`, so answers don't change under you when a new image is published.
+> **Tip:** pin the image tag (`:8.0.0-preview.2`) in your client config. Prereleases never get the `latest` tag.
 
 ## Tools
 
@@ -54,18 +59,23 @@ The answer should mention `7.2.0` and commit `13fff09c`.
 | `search_code` | Case-insensitive substring search of the source (`path_prefix` and `extension` narrow it) |
 | `get_file`, `list_files` | Read any file (optionally a line range) or list files under a path |
 | `list_examples` | List example and test-bot source files |
+| `list_guide_sections`, `get_guide_section`, `search_guide` | Read the curated guide: decision tables (which message loop / dispatcher / serializer), patterns, ship checklist |
+| `get_gotchas` | Describe a problem ("button spins forever") and get the known cause and fix |
 | `get_changes`, `list_refs` | Public API diff between two tags/commits, for example before an upgrade |
 
-Resource: `tgbotbase://readme` (the full README).
+Resources: `tgbotbase://readme` (the framework README) and `tgbotbase://guide` (the full guide).
 
 > **Note:** the symbol index is built with regular expressions, not a C# compiler. It is good for finding types and
-> comparing public APIs, but can miss unusual declarations. For exact behavior, read the file with `get_file`.
+> comparing public APIs, but can miss unusual declarations, and `get_changes` may list a few false positives (for example
+> a word inside a comment reported as a type). For exact behavior, read the file with `get_file`.
 
 ## Example prompts
 
 - "Using tgbotbase, write a form with a paged `ButtonGrid`. Check the real `ButtonGrid` source for the API."
 - "Which controls exist and how do they differ? Use `find_subclasses` on `ControlBase`."
 - "How do I persist user sessions across restarts? Look at the state machine classes."
+- "My button spins forever. Why?" (uses `get_gotchas`)
+- "Which message loop and request dispatcher should I use for a bot with broadcasts?" (uses the guide's decision tables)
 - "What changed in the public API between v7.1.0 and the current version?"
 
 > **Tip:** tell the assistant to *verify against the source* (`get_symbol`, `get_file`) instead of answering from memory,
@@ -84,7 +94,7 @@ cd deploy && cp .env.example .env
 docker compose up -d
 ```
 The compose file runs the container read-only with a 512 MB memory and 1 CPU limit.
-> **Note:** the image tags `latest` and `7.2.0` exist on Docker Hub only after the first publish from `main` (see
+> **Note:** the image tag `8.0.0-preview.2` exists on Docker Hub only after the first publish from `main` (see
 > [CI and publishing](#ci-and-publishing)). Before that, `docker compose up` fails with "not found".
 
 ### 2. Configure nginx
@@ -134,14 +144,15 @@ cd deploy && docker compose pull && docker compose up -d
 2. Update the defaults in the `Dockerfile` and the pinned version in this README, then merge to `main` to publish.
 3. Before changing your bot, ask the assistant for `get_changes` between the old and new ref to see what to adapt.
 
-> **Tip:** the repo does not tag NuGet releases (there is no `v7.2.0`). Match the NuGet publish date to a commit on
+> **Tip:** the repo does not tag NuGet releases (there is no `v7.2.0` or `v8.0.0-preview.2`). Match the NuGet publish date to a commit on
 > `master` and pin that commit SHA.
 
 ## CI and publishing
 
-- `ci.yml` runs on every pull request: builds the image and runs `tests/smoke.py` inside it.
+- `ci.yml` runs on every pull request: builds the image, runs `tests/smoke.py` inside it, and runs `tests/check_guide.py`,
+  which fails if the guide mentions a source file that no longer exists in the pinned source (so a version bump can't silently leave the guide stale).
 - `publish.yml` runs only on a push to `main` or a manual dispatch on `main`. It re-runs CI, then pushes
-  `severnbli/telegram-bot-framework-mcp:latest` and `:<framework version>` (read from the `Dockerfile`) to Docker Hub
+  `severnbli/telegram-bot-framework-mcp:<framework version>` (read from the `Dockerfile`; plus `:latest` for stable, non-prerelease versions) to Docker Hub
   for `linux/amd64` and `linux/arm64`.
 
 > **Warning:** publishing needs the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. Without them the
