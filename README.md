@@ -3,7 +3,6 @@
 **Give your AI assistant the real source, docs and a curated how-to guide for the
 [TelegramBotBase](https://github.com/MajMcCloud/TelegramBotFramework) .NET framework.**
 
-[![CI](https://github.com/Severnbli/telegram-bot-framework-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Severnbli/telegram-bot-framework-mcp/actions/workflows/ci.yml)
 [![Docker pulls](https://img.shields.io/docker/pulls/severnbli/telegram-bot-framework-mcp?logo=docker)](https://hub.docker.com/r/severnbli/telegram-bot-framework-mcp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/protocol-MCP-6f42c1)](https://modelcontextprotocol.io)
